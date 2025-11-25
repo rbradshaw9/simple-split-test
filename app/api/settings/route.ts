@@ -54,15 +54,34 @@ export async function POST(request: NextRequest) {
 
     // Handle test actions
     if (action === 'test-ga4') {
-      const result = await testGA4Connection(config);
+      // Merge with existing config to get unmasked values
+      const currentConfig = await loadConfig();
+      const testConfig = {
+        ...currentConfig,
+        ...config,
+        googleServiceAccount: {
+          email: config.googleServiceAccount?.email || currentConfig.googleServiceAccount.email,
+          privateKey: config.googleServiceAccount?.privateKey?.includes('*') 
+            ? currentConfig.googleServiceAccount.privateKey 
+            : config.googleServiceAccount?.privateKey || currentConfig.googleServiceAccount.privateKey
+        }
+      };
+      const result = await testGA4Connection(testConfig);
       return NextResponse.json(result);
     }
 
     if (action === 'test-cloudflare') {
+      // Merge with existing config to get unmasked values
+      const currentConfig = await loadConfig();
+      const testConfig = {
+        cfAccountId: config.cfAccountId || currentConfig.cfAccountId,
+        cfApiToken: config.cfApiToken?.includes('*') ? currentConfig.cfApiToken : config.cfApiToken || currentConfig.cfApiToken,
+        cfNamespaceId: config.cfNamespaceId || currentConfig.cfNamespaceId
+      };
       const result = await testCloudflareConnection(
-        config.cfAccountId,
-        config.cfApiToken,
-        config.cfNamespaceId
+        testConfig.cfAccountId,
+        testConfig.cfApiToken,
+        testConfig.cfNamespaceId
       );
       return NextResponse.json(result);
     }
@@ -129,8 +148,8 @@ function checkAuth(request: NextRequest): NextResponse | null {
  */
 function maskSecret(secret: string): string {
   if (!secret || secret.length < 8) {
-    return '••••••••';
+    return '********';
   }
   const visible = 4;
-  return secret.substring(0, visible) + '•'.repeat(8) + secret.substring(secret.length - visible);
+  return secret.substring(0, visible) + '*'.repeat(8) + secret.substring(secret.length - visible);
 }
