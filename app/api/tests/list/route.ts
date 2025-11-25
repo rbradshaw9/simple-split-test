@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAllTests } from '@/lib/kv';
 
+// Force dynamic rendering - do not cache this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const tests = await getAllTests();
