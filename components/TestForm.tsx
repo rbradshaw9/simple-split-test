@@ -85,7 +85,10 @@ export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Crea
         onSuccess(result.testId);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Test creation error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+      alert(`Error: ${errorMessage}`); // Make sure user sees the error
     } finally {
       setLoading(false);
     }
