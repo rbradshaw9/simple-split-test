@@ -38,13 +38,22 @@ export default function TestDashboard() {
     try {
       if (refresh) setRefreshing(true);
       
-      const response = await fetch(`/api/stats/${testId}?refresh=${refresh}`);
-      const data = await response.json();
-
+      // Add cache busting
+      const response = await fetch(`/api/stats/${testId}?refresh=${refresh}&t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch data');
+        if (response.status === 404) {
+          setError('Test not found. It may have been deleted.');
+        } else {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to fetch data');
+        }
+        return;
       }
-
+      
+      const data = await response.json();
       setTest(data.test);
       setStats(data.stats);
       setError(null);
@@ -116,7 +125,8 @@ export default function TestDashboard() {
       });
 
       if (response.ok) {
-        router.push('/');
+        // Force a hard navigation to clear all cache
+        window.location.href = '/';
       } else {
         alert('Failed to delete test');
       }

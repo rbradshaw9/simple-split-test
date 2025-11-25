@@ -40,11 +40,19 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      test,
-      stats,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        test,
+        stats,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching stats:', error);
     return NextResponse.json(

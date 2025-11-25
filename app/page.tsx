@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { TestForm } from '@/components/TestForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileCode, Copy, CheckCircle, Settings, ExternalLink, Calendar, Edit } from 'lucide-react';
+import { FileCode, Copy, CheckCircle, Settings, ExternalLink, Calendar, Edit, RefreshCw } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function HomePage() {
@@ -211,12 +211,24 @@ export default function HomePage() {
             Server-side split testing with Cloudflare Workers and GA4 tracking
           </p>
         </div>
-        <Link href="/settings">
-          <Button variant="outline" size="sm">
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              loadExistingTests();
+            }}
+            title="Refresh test list"
+          >
+            <RefreshCw className="w-4 h-4" />
           </Button>
-        </Link>
+          <Link href="/settings">
+            <Button variant="outline" size="sm">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Existing Tests */}
