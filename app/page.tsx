@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TestForm } from '@/components/TestForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileCode, Copy, CheckCircle, Settings } from 'lucide-react';
+import { FileCode, Copy, CheckCircle, Settings, ExternalLink, Calendar } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function HomePage() {
@@ -15,6 +15,26 @@ export default function HomePage() {
   const [testData, setTestData] = useState<any>(null);
   const [copiedWorker, setCopiedWorker] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [existingTests, setExistingTests] = useState<any[]>([]);
+  const [loadingTests, setLoadingTests] = useState(true);
+
+  useEffect(() => {
+    loadExistingTests();
+  }, []);
+
+  const loadExistingTests = async () => {
+    try {
+      const response = await fetch('/api/tests/list');
+      if (response.ok) {
+        const data = await response.json();
+        setExistingTests(data.tests || []);
+      }
+    } catch (error) {
+      console.error('Error loading tests:', error);
+    } finally {
+      setLoadingTests(false);
+    }
+  };
 
   const handleTestCreated = async (testId: string) => {
     // Fetch the created test data
@@ -160,9 +180,9 @@ export default function HomePage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold mb-2">Create A/B Test</h2>
+          <h2 className="text-3xl font-bold mb-2">EdgeSplit A/B Tests</h2>
           <p className="text-muted-foreground">
-            Generate a server-side split test with Cloudflare Workers and GA4 tracking
+            Server-side split testing with Cloudflare Workers and GA4 tracking
           </p>
         </div>
         <Link href="/settings">
@@ -173,7 +193,74 @@ export default function HomePage() {
         </Link>
       </div>
 
-      <TestForm onSuccess={handleTestCreated} />
+      {/* Existing Tests */}
+      {existingTests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Tests</CardTitle>
+            <CardDescription>
+              {existingTests.length} test{existingTests.length !== 1 ? 's' : ''} configured
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {existingTests.map((test) => (
+                <div
+                  key={test.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{test.name}</h3>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3" />
+                        {test.entryUrl || test.entryPath}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(test.createdAt).toLocaleDateString()}
+                      </span>
+                      {test.autoOptimize && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                          Auto-Optimize
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/tests/${test.id}`)}
+                  >
+                    View Details
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {loadingTests && (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            Loading tests...
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Create New Test */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Test</CardTitle>
+          <CardDescription>
+            Set up a new A/B test with Cloudflare Workers
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TestForm onSuccess={handleTestCreated} />
+        </CardContent>
+      </Card>
 
       <Card className="mt-8">
         <CardHeader>
