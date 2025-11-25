@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create test configuration
-    const test = createTestConfig(data);
+    const test = await createTestConfig(data);
 
     // Generate Worker code
     const workerCode = generateWorkerCode(test);

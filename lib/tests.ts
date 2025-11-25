@@ -1,6 +1,6 @@
 import type { Test, CreateTestRequest } from '@/types/Test';
 import { slugify } from './utils';
-import { env } from './env';
+import { loadConfig } from './config';
 
 export function validateTestConfig(data: CreateTestRequest): string[] {
   const errors: string[] = [];
@@ -44,7 +44,7 @@ export function validateTestConfig(data: CreateTestRequest): string[] {
   return errors;
 }
 
-export function createTestConfig(data: CreateTestRequest): Test {
+export async function createTestConfig(data: CreateTestRequest): Promise<Test> {
   const testId = slugify(data.name);
   const timestamp = Date.now();
   
@@ -52,6 +52,9 @@ export function createTestConfig(data: CreateTestRequest): Test {
   const entryUrl = new URL(data.entryPath);
   const entryDomain = entryUrl.hostname;
   const entryPathOnly = entryUrl.pathname;
+
+  // Load config to get GA4 settings
+  const config = await loadConfig();
 
   return {
     id: testId,
@@ -67,9 +70,9 @@ export function createTestConfig(data: CreateTestRequest): Test {
     })),
     controlPercentage: data.controlPercentage,
     ga4: {
-      measurementId: env.gaMeasurementId,
-      propertyId: env.gaPropertyId,
-      apiSecret: env.gaApiSecret,
+      measurementId: config.gaMeasurementId,
+      propertyId: config.gaPropertyId,
+      apiSecret: config.gaApiSecret,
     },
     eventNames: {
       view: `${testId}_view`,

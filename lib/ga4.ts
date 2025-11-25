@@ -1,5 +1,5 @@
 import type { Test, TestStats, GA4ReportResponse, GA4ReportRow } from '@/types/Test';
-import { env } from './env';
+import { loadConfig, type AppConfig } from './config';
 
 /**
  * GA4 Data API integration
@@ -195,8 +195,9 @@ function createEmptyStats(test: Test): TestStats {
 }
 
 export async function getAccessToken(serviceAccount?: any): Promise<string> {
-  // Use validated service account credentials from env or passed credentials
-  const credentials = serviceAccount || env.googleServiceAccount;
+  // Use validated service account credentials from config or passed credentials
+  const config = await loadConfig();
+  const credentials = serviceAccount || config.googleServiceAccount;
   
   try {
     // Create JWT
@@ -225,7 +226,7 @@ export async function getAccessToken(serviceAccount?: any): Promise<string> {
   }
 }
 
-async function createJWT(credentials: typeof env.googleServiceAccount): Promise<string> {
+async function createJWT(credentials: AppConfig['googleServiceAccount']): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   
   const header = {

@@ -1,5 +1,5 @@
 import type { Test } from '@/types/Test';
-import { env } from './env';
+import { env } from './env'; // Only used as fallback during initialization
 
 /**
  * Cloudflare KV helper functions
