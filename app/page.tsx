@@ -20,6 +20,25 @@ export default function HomePage() {
 
   useEffect(() => {
     loadExistingTests();
+    
+    // Reload tests when page becomes visible (e.g., back button navigation)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadExistingTests();
+      }
+    };
+    
+    const handleFocus = () => {
+      loadExistingTests();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const loadExistingTests = async () => {
@@ -42,6 +61,8 @@ export default function HomePage() {
     const data = await response.json();
     setTestData(data);
     setShowResults(true);
+    // Reload test list to reflect any changes
+    await loadExistingTests();
   };
 
   const copyToClipboard = (text: string, type: 'worker' | 'snippet') => {
@@ -164,9 +185,10 @@ export default function HomePage() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => {
+            onClick={async () => {
               setShowResults(false);
               setTestData(null);
+              await loadExistingTests();
             }}
           >
             Create Another Test
