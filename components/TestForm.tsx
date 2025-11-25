@@ -10,6 +10,9 @@ import type { CreateTestRequest } from '@/types/Test';
 
 interface TestFormProps {
   onSuccess?: (testId: string) => void;
+  onSubmit?: (data: CreateTestRequest) => Promise<void>;
+  initialData?: CreateTestRequest;
+  submitLabel?: string;
 }
 
 interface Variant {
@@ -17,18 +20,18 @@ interface Variant {
   percentage: number;
 }
 
-export function TestForm({ onSuccess }: TestFormProps) {
+export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Create Test' }: TestFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [name, setName] = useState('');
-  const [entryPath, setEntryPath] = useState('');
-  const [controlUrl, setControlUrl] = useState('');
-  const [controlPercentage, setControlPercentage] = useState(50);
-  const [variants, setVariants] = useState<Variant[]>([
-    { url: '', percentage: 50 }
-  ]);
-  const [autoOptimize, setAutoOptimize] = useState(false);
+  const [name, setName] = useState(initialData?.name || '');
+  const [entryPath, setEntryPath] = useState(initialData?.entryPath || '');
+  const [controlUrl, setControlUrl] = useState(initialData?.controlUrl || '');
+  const [controlPercentage, setControlPercentage] = useState(initialData?.controlPercentage || 50);
+  const [variants, setVariants] = useState<Variant[]>(
+    initialData?.variants || [{ url: '', percentage: 50 }]
+  );
+  const [autoOptimize, setAutoOptimize] = useState(initialData?.autoOptimize || false);
 
   const addVariant = () => {
     setVariants([...variants, { url: '', percentage: 0 }]);
@@ -59,6 +62,13 @@ export function TestForm({ onSuccess }: TestFormProps) {
         autoOptimize,
       };
 
+      // Use custom onSubmit handler if provided (for edit mode)
+      if (onSubmit) {
+        await onSubmit(data);
+        return;
+      }
+
+      // Default behavior: create new test
       const response = await fetch('/api/tests/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,9 +96,11 @@ export function TestForm({ onSuccess }: TestFormProps) {
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>Create New A/B Test</CardTitle>
+        <CardTitle>{initialData ? 'Edit A/B Test' : 'Create New A/B Test'}</CardTitle>
         <CardDescription>
-          Set up a server-side split test with Cloudflare Workers and GA4 tracking
+          {initialData 
+            ? 'Update your test configuration'
+            : 'Set up a server-side split test with Cloudflare Workers and GA4 tracking'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -238,7 +250,7 @@ export function TestForm({ onSuccess }: TestFormProps) {
           )}
 
           <Button type="submit" className="w-full" disabled={loading || totalPercentage !== 100}>
-            {loading ? 'Creating Test...' : 'Generate Test'}
+            {loading ? (initialData ? 'Updating...' : 'Creating...') : submitLabel}
           </Button>
         </form>
       </CardContent>

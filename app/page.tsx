@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { TestForm } from '@/components/TestForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileCode, Copy, CheckCircle, Settings, ExternalLink, Calendar } from 'lucide-react';
+import { FileCode, Copy, CheckCircle, Settings, ExternalLink, Calendar, Edit } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function HomePage() {
@@ -227,13 +227,22 @@ export default function HomePage() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push(`/tests/${test.id}`)}
-                  >
-                    View Details
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/tests/${test.id}/edit`)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/tests/${test.id}`)}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

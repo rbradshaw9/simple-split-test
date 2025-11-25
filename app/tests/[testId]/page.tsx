@@ -6,7 +6,11 @@ import { StatCard } from '@/components/StatCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, ArrowLeft, TrendingUp, Eye, Target } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  RefreshCw, ArrowLeft, TrendingUp, Eye, Target, 
+  Edit, Trash2, Code, Copy, CheckCircle, FileCode, AlertCircle, CheckCircle2
+} from 'lucide-react';
 import { formatPercentage, formatRelativeTime, calculateLift } from '@/lib/utils';
 import type { Test, TestStats } from '@/types/Test';
 
@@ -20,6 +24,15 @@ export default function TestDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCodes, setShowCodes] = useState(false);
+  const [workerCode, setWorkerCode] = useState('');
+  const [trackingSnippet, setTrackingSnippet] = useState('');
+  const [setupInstructions, setSetupInstructions] = useState('');
+  const [copiedWorker, setCopiedWorker] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = async (refresh = false) => {
     try {
@@ -47,6 +60,73 @@ export default function TestDashboard() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId]);
+
+  const loadCodes = async () => {
+    try {
+      const response = await fetch(`/api/tests/${testId}/codes`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setWorkerCode(data.workerCode);
+        setTrackingSnippet(data.trackingSnippet);
+        setSetupInstructions(data.setupInstructions);
+        setShowCodes(true);
+      }
+    } catch (err) {
+      console.error('Error loading codes:', err);
+    }
+  };
+
+  const copyToClipboard = (text: string, type: 'worker' | 'snippet') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'worker') {
+      setCopiedWorker(true);
+      setTimeout(() => setCopiedWorker(false), 2000);
+    } else {
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 2000);
+    }
+  };
+
+  const verifyInstallation = async () => {
+    setVerifying(true);
+    try {
+      const response = await fetch(`/api/tests/${testId}/verify`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setVerificationResult(data);
+      }
+    } catch (err) {
+      console.error('Error verifying installation:', err);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this test? This cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/tests/${testId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        router.push('/');
+      } else {
+        alert('Failed to delete test');
+      }
+    } catch (err) {
+      console.error('Error deleting test:', err);
+      alert('Failed to delete test');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -98,13 +178,45 @@ export default function TestDashboard() {
             )}
           </div>
         </div>
-        <Button
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh Now'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={loadCodes}
+          >
+            <Code className="w-4 h-4 mr-2" />
+            View Codes
+          </Button>
+          <Button
+            variant="outline"
+            onClick={verifyInstallation}
+            disabled={verifying}
+          >
+            <CheckCircle2 className={`w-4 h-4 mr-2 ${verifying ? 'animate-spin' : ''}`} />
+            {verifying ? 'Verifying...' : 'Verify Installation'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/tests/${testId}/edit`)}
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+          <Button
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* Optimization Mode Info */}
@@ -122,6 +234,161 @@ export default function TestDashboard() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Verification Results */}
+      {verificationResult && (
+        <Card className={verificationResult.overall ? 'border-green-500 bg-green-50 dark:bg-green-950' : 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {verificationResult.overall ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  Installation Verified
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  Installation Issues Detected
+                </>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-2">
+              {verificationResult.checks.workerInstalled ? (
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p className="font-medium">Worker Code</p>
+                <p className="text-sm text-muted-foreground">{verificationResult.checks.workerMessage}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              {verificationResult.checks.trackingInstalled ? (
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p className="font-medium">Tracking Snippet</p>
+                <p className="text-sm text-muted-foreground">{verificationResult.checks.trackingMessage}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              {verificationResult.checks.recentActivity ? (
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p className="font-medium">Recent Activity</p>
+                <p className="text-sm text-muted-foreground">{verificationResult.checks.activityMessage}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Code Display */}
+      {showCodes && (
+        <>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileCode className="w-5 h-5" />
+                    Cloudflare Worker Code
+                  </CardTitle>
+                  <CardDescription>
+                    Deploy this code to your Cloudflare Worker
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(workerCode, 'worker')}
+                >
+                  {copiedWorker ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={workerCode}
+                readOnly
+                rows={20}
+                className="font-mono text-xs"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Code className="w-5 h-5" />
+                    Tracking Snippet
+                  </CardTitle>
+                  <CardDescription>
+                    Add this to your conversion/thank you page
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(trackingSnippet, 'snippet')}
+                >
+                  {copiedSnippet ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={trackingSnippet}
+                readOnly
+                rows={12}
+                className="font-mono text-xs"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Setup Instructions</CardTitle>
+              <CardDescription>Follow these steps to deploy your test</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg overflow-x-auto">
+                {setupInstructions}
+              </pre>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Winner Card */}
