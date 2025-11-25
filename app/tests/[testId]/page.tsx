@@ -219,11 +219,35 @@ export default function TestDashboard() {
         </div>
       </div>
 
+      {/* Deployment Checklist */}
+      <Card className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+        <CardHeader>
+          <CardTitle className="text-lg">🚀 Deployment Checklist</CardTitle>
+          <CardDescription>Follow these steps to activate your test</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <p className="font-medium text-sm">1. Click &quot;View Codes&quot; button above</p>
+            <p className="font-medium text-sm">2. Copy Worker code and deploy to Cloudflare Workers</p>
+            <p className="font-medium text-sm">3. Configure Worker route (e.g., yourdomain.com{test.entryPath}*)</p>
+            <p className="font-medium text-sm">4. Add KV binding: Variable name <code className="bg-white px-1 rounded">AB_TESTS</code></p>
+            <p className="font-medium text-sm">5. Copy tracking snippet to your conversion/thank-you page</p>
+            <p className="font-medium text-sm">6. Test with: <code className="bg-white px-1 rounded">?__edgesplit_force=control</code></p>
+            <p className="font-medium text-sm">7. Click &quot;Verify Installation&quot; to confirm everything works</p>
+          </div>
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground">
+              💡 <strong>Tip:</strong> Use <code className="bg-white px-1 rounded">?__edgesplit_force=variant_a</code> to test each variant
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Optimization Mode Info */}
       {test.autoOptimize && (
-        <Card className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+        <Card className="border-purple-500 bg-purple-50 dark:bg-purple-950">
           <CardHeader>
-            <CardTitle className="text-lg">Adaptive Traffic Allocation</CardTitle>
+            <CardTitle className="text-lg">⚡ Adaptive Traffic Allocation</CardTitle>
             <CardDescription>
               This test uses Thompson Sampling to automatically send more traffic to better-performing variants
             </CardDescription>
@@ -253,6 +277,11 @@ export default function TestDashboard() {
                 </>
               )}
             </CardTitle>
+            <CardDescription>
+              {!verificationResult.overall && (
+                <>⚠️ This checks your deployed worker. Click &quot;View Codes&quot; below to deploy first.</>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-start gap-2">
