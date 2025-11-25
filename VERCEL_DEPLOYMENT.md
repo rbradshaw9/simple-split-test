@@ -1,30 +1,10 @@
 # Vercel Deployment Guide
 
-## Pre-Deployment Checklist ✅
+## Prerequisites
 
-Before deploying to Vercel, I've verified:
-
-### ✅ Code Quality
-- **TypeScript compilation**: Clean, no errors
-- **ESLint**: Only 1 minor warning (now suppressed with eslint-disable comment)
-- **Production build**: Successfully builds with Next.js 14.2.33
-- **CSS errors**: Only CSS linter warnings (Tailwind directives) - these are normal and won't affect deployment
-
-### ✅ Environment Variables
-All credentials are configured in `.env.local`:
-- GA4 Measurement ID, Property ID, API Secret
-- Google Service Account (with valid private key)
-- Cloudflare Account ID, API Token, KV Namespace ID
-
-### ✅ Dependencies
-- All packages installed and up to date
-- Node.js >= 18.0.0 required (specified in package.json)
-- No security vulnerabilities that would block deployment
-
-### ✅ File Structure
-- All required files present
-- `.gitignore` properly configured (`.env.local` excluded)
-- `vercel.json` configuration created
+- Vercel account (free tier is sufficient)
+- Code pushed to GitHub
+- All environment variables ready (see below)
 
 ---
 
@@ -258,14 +238,42 @@ For quick reference, here are all the variables you need in Vercel:
 
 ---
 
+## Managing Configuration
+
+### Via Settings Page (Recommended) 🎯
+
+After deployment, you can manage all credentials through the web UI:
+
+1. Visit `https://your-project.vercel.app/settings`
+2. Enter your `SETTINGS_PASSWORD`
+3. Update any credentials (GA4, Cloudflare, etc.)
+4. Click "Test Connection" to verify
+5. Click "Save Settings"
+
+**Benefits:**
+- ✅ Changes take effect immediately (no redeployment)
+- ✅ Test connections before saving
+- ✅ Stored in Cloudflare KV (fast, global)
+- ✅ Environment variables serve as fallback
+
+### Via Vercel Dashboard
+
+Alternatively, update environment variables in Vercel:
+1. Go to Project Settings → Environment Variables
+2. Edit the variable
+3. **Must redeploy** for changes to take effect
+
+---
+
 ## Quick Deploy Checklist
 
 - [ ] Push code to GitHub
 - [ ] Connect repository to Vercel
-- [ ] Add all environment variables in Vercel dashboard
+- [ ] Add all environment variables in Vercel dashboard (including SETTINGS_PASSWORD!)
 - [ ] Deploy
 - [ ] Update APP_URL and NEXT_PUBLIC_APP_URL with production URL
 - [ ] Redeploy
+- [ ] Visit `/settings` and set a secure password
 - [ ] Test: Create a test
 - [ ] Test: View dashboard
 - [ ] Test: Verify KV storage
@@ -273,6 +281,16 @@ For quick reference, here are all the variables you need in Vercel:
 - [ ] Deploy first Cloudflare Worker
 - [ ] Configure Worker routes
 - [ ] Monitor for errors
+
+---
+
+## Security Notes
+
+1. **Always set SETTINGS_PASSWORD** - Without it, anyone can edit your config
+2. Use a strong, unique password (not your Vercel password)
+3. Never commit credentials to Git
+4. Regularly rotate API tokens
+5. Monitor access logs
 
 ---
 

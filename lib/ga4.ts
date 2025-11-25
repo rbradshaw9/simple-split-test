@@ -194,9 +194,9 @@ function createEmptyStats(test: Test): TestStats {
   };
 }
 
-async function getAccessToken(): Promise<string> {
-  // Use validated service account credentials from env
-  const credentials = env.googleServiceAccount;
+export async function getAccessToken(serviceAccount?: any): Promise<string> {
+  // Use validated service account credentials from env or passed credentials
+  const credentials = serviceAccount || env.googleServiceAccount;
   
   try {
     // Create JWT

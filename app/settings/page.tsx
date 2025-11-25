@@ -1,168 +1,391 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, Settings as SettingsIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { CheckCircle2, AlertCircle, Lock, Loader2 } from 'lucide-react';
+
+interface AppConfig {
+  gaMeasurementId: string;
+  gaPropertyId: string;
+  gaApiSecret: string;
+  googleServiceAccount: {
+    client_email: string;
+    project_id: string;
+    private_key: string;
+  };
+  cfAccountId: string;
+  cfNamespaceId: string;
+  cfApiToken: string;
+}
 
 export default function SettingsPage() {
-  // In a real implementation, you might want to allow users to override
-  // environment variables or manage multiple GA4 properties
-  
+  const [authenticated, setAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [editedConfig, setEditedConfig] = useState<AppConfig | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [ga4TestResult, setGa4TestResult] = useState<{ success: boolean; error?: string } | null>(null);
+  const [cfTestResult, setCfTestResult] = useState<{ success: boolean; error?: string } | null>(null);
+
+  const loadConfig = async (pwd: string) => {
+    setLoading(true);
+    setAuthError('');
+    try {
+      const response = await fetch('/api/settings', {
+        headers: {
+          'Authorization': `Bearer ${pwd}`,
+        },
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setAuthError('Invalid password');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to load settings');
+      }
+
+      const data = await response.json();
+      setConfig(data.config);
+      setEditedConfig(data.config);
+      setAuthenticated(true);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await loadConfig(password);
+  };
+
+  const handleSave = async () => {
+    if (!editedConfig) return;
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${password}`,
+        },
+        body: JSON.stringify({ config: editedConfig }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save settings');
+      }
+
+      setSuccess('Settings saved successfully! Changes are now active.');
+      setConfig(editedConfig);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testGA4 = async () => {
+    if (!editedConfig) return;
+    setGa4TestResult(null);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${password}`,
+        },
+        body: JSON.stringify({ config: editedConfig, action: 'test-ga4' }),
+      });
+      const result = await response.json();
+      setGa4TestResult(result);
+    } catch (err) {
+      setGa4TestResult({ success: false, error: 'Failed to test connection' });
+    }
+  };
+
+  const testCloudflare = async () => {
+    if (!editedConfig) return;
+    setCfTestResult(null);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${password}`,
+        },
+        body: JSON.stringify({ config: editedConfig, action: 'test-cloudflare' }),
+      });
+      const result = await response.json();
+      setCfTestResult(result);
+    } catch (err) {
+      setCfTestResult({ success: false, error: 'Failed to test connection' });
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="container mx-auto p-6 max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Settings Password
+            </CardTitle>
+            <CardDescription>
+              Enter your settings password to manage configuration
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter settings password"
+                  required
+                />
+                {authError && (
+                  <p className="text-sm text-destructive mt-2">{authError}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Authenticating...
+                  </>
+                ) : (
+                  'Unlock Settings'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!editedConfig) return null;
+
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">
-          Configure your EdgeSplit installation
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage your EdgeSplit configuration
         </p>
       </div>
 
-      {/* GA4 Configuration */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <SettingsIcon className="w-5 h-5" />
-            <CardTitle>Google Analytics 4 Configuration</CardTitle>
-          </div>
-          <CardDescription>
-            GA4 credentials are configured via environment variables for security
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-semibold text-green-900 dark:text-green-100 mb-1">
-                GA4 is Configured
-              </p>
-              <p className="text-sm text-green-800 dark:text-green-200">
-                Your GA4 credentials are loaded from environment variables and will be used for all tests.
-              </p>
-            </div>
-          </div>
+      {success && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
+          <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+          <p className="text-sm text-green-800">{success}</p>
+        </div>
+      )}
 
-          <div className="space-y-3 pt-4">
-            <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
-              <span className="text-sm font-medium">Measurement ID:</span>
-              <code className="px-3 py-1.5 bg-muted rounded text-sm font-mono">
-                {process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || 'Configured (server-side)'}
-              </code>
-            </div>
-            
-            <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
-              <span className="text-sm font-medium">Property ID:</span>
-              <code className="px-3 py-1.5 bg-muted rounded text-sm font-mono">
-                {process.env.NEXT_PUBLIC_GA4_PROPERTY_ID || 'Configured (server-side)'}
-              </code>
-            </div>
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
 
-            <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
-              <span className="text-sm font-medium">API Secret:</span>
-              <code className="px-3 py-1.5 bg-muted rounded text-sm font-mono">
-                ••••••••••••••• (hidden)
-              </code>
+      <div className="space-y-6">
+        {/* GA4 Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle>GA4 Configuration</CardTitle>
+            <CardDescription>
+              Google Analytics 4 integration settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="gaMeasurementId">Measurement ID</Label>
+              <Input
+                id="gaMeasurementId"
+                value={editedConfig.gaMeasurementId}
+                onChange={(e) => setEditedConfig({ ...editedConfig, gaMeasurementId: e.target.value })}
+                placeholder="G-XXXXXXXXXX"
+              />
             </div>
-          </div>
+            <div>
+              <Label htmlFor="gaPropertyId">Property ID</Label>
+              <Input
+                id="gaPropertyId"
+                value={editedConfig.gaPropertyId}
+                onChange={(e) => setEditedConfig({ ...editedConfig, gaPropertyId: e.target.value })}
+                placeholder="123456789"
+              />
+            </div>
+            <div>
+              <Label htmlFor="gaApiSecret">API Secret</Label>
+              <Input
+                id="gaApiSecret"
+                type="password"
+                value={editedConfig.gaApiSecret}
+                onChange={(e) => setEditedConfig({ ...editedConfig, gaApiSecret: e.target.value })}
+                placeholder="Enter GA4 API Secret"
+              />
+            </div>
+            <div>
+              <Label htmlFor="serviceAccountEmail">Service Account Email</Label>
+              <Input
+                id="serviceAccountEmail"
+                value={editedConfig.googleServiceAccount.client_email}
+                onChange={(e) => setEditedConfig({
+                  ...editedConfig,
+                  googleServiceAccount: { ...editedConfig.googleServiceAccount, client_email: e.target.value }
+                })}
+                placeholder="service-account@project.iam.gserviceaccount.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="privateKey">Service Account Private Key</Label>
+              <Textarea
+                id="privateKey"
+                value={editedConfig.googleServiceAccount.private_key}
+                onChange={(e) => setEditedConfig({
+                  ...editedConfig,
+                  googleServiceAccount: { ...editedConfig.googleServiceAccount, private_key: e.target.value }
+                })}
+                placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+                rows={6}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={testGA4}>
+                Test GA4 Connection
+              </Button>
+              {ga4TestResult && (
+                <div className="flex items-center gap-2">
+                  {ga4TestResult.success ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-600">Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <span className="text-sm text-red-600">{ga4TestResult.error}</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> To change these values, update your <code className="px-1.5 py-0.5 bg-muted rounded text-xs">.env.local</code> file and restart the development server, or update environment variables in your deployment platform (Vercel, etc.).
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Cloudflare Configuration */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <SettingsIcon className="w-5 h-5" />
+        {/* Cloudflare Configuration */}
+        <Card>
+          <CardHeader>
             <CardTitle>Cloudflare Configuration</CardTitle>
-          </div>
-          <CardDescription>
-            Cloudflare credentials for KV storage and Worker deployment
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-semibold text-green-900 dark:text-green-100 mb-1">
-                Cloudflare is Configured
-              </p>
-              <p className="text-sm text-green-800 dark:text-green-200">
-                Using Cloudflare KV REST API for production storage.
-              </p>
+            <CardDescription>
+              Cloudflare KV storage settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="cfAccountId">Account ID</Label>
+              <Input
+                id="cfAccountId"
+                value={editedConfig.cfAccountId}
+                onChange={(e) => setEditedConfig({ ...editedConfig, cfAccountId: e.target.value })}
+                placeholder="32-character account ID"
+              />
             </div>
-          </div>
-
-          <div className="space-y-3 pt-4">
-            <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
-              <span className="text-sm font-medium">Account ID:</span>
-              <code className="px-3 py-1.5 bg-muted rounded text-sm font-mono">
-                {process.env.NEXT_PUBLIC_CF_ACCOUNT_ID || 'Configured (server-side)'}
-              </code>
+            <div>
+              <Label htmlFor="cfNamespaceId">KV Namespace ID</Label>
+              <Input
+                id="cfNamespaceId"
+                value={editedConfig.cfNamespaceId}
+                onChange={(e) => setEditedConfig({ ...editedConfig, cfNamespaceId: e.target.value })}
+                placeholder="32-character namespace ID"
+              />
             </div>
-            
-            <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
-              <span className="text-sm font-medium">API Token:</span>
-              <code className="px-3 py-1.5 bg-muted rounded text-sm font-mono">
-                ••••••••••••••• (hidden)
-              </code>
+            <div>
+              <Label htmlFor="cfApiToken">API Token</Label>
+              <Input
+                id="cfApiToken"
+                type="password"
+                value={editedConfig.cfApiToken}
+                onChange={(e) => setEditedConfig({ ...editedConfig, cfApiToken: e.target.value })}
+                placeholder="Enter Cloudflare API Token"
+              />
             </div>
-
-            <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
-              <span className="text-sm font-medium">KV Namespace:</span>
-              <code className="px-3 py-1.5 bg-muted rounded text-sm font-mono">
-                AB_TESTS
-              </code>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={testCloudflare}>
+                Test Cloudflare Connection
+              </Button>
+              {cfTestResult && (
+                <div className="flex items-center gap-2">
+                  {cfTestResult.success ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-600">Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <span className="text-sm text-red-600">{cfTestResult.error}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> Cloudflare credentials are managed via environment variables for security.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="flex gap-4">
+          <Button onClick={handleSave} disabled={saving} className="flex-1">
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setEditedConfig(config)}
+            disabled={saving}
+          >
+            Reset
+          </Button>
+        </div>
 
-      {/* Documentation Links */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Documentation</CardTitle>
-          <CardDescription>
-            Learn more about configuring EdgeSplit
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li>
-              <a href="/ENV_SETUP.md" className="text-primary hover:underline">
-                Environment Setup Guide
-              </a>
-              {' '}- Detailed instructions for configuring all environment variables
-            </li>
-            <li>
-              <a href="/SETUP.md" className="text-primary hover:underline">
-                General Setup
-              </a>
-              {' '}- Complete setup instructions including Cloudflare Workers
-            </li>
-            <li>
-              <a href="/API_REFERENCE.md" className="text-primary hover:underline">
-                API Reference
-              </a>
-              {' '}- All available API endpoints and parameters
-            </li>
-            <li>
-              <a href="/VERCEL_DEPLOYMENT.md" className="text-primary hover:underline">
-                Vercel Deployment Guide
-              </a>
-              {' '}- Step-by-step deployment instructions
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
+        <div className="p-4 bg-muted rounded-lg">
+          <p className="text-sm">
+            <strong>Note:</strong> Changes are saved to Cloudflare KV and take effect immediately.
+            No redeployment required. Environment variables serve as fallback if KV storage fails.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

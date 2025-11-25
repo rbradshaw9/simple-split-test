@@ -2,6 +2,9 @@
  * Environment Variable Configuration
  * 
  * This module loads and validates all required environment variables for EdgeSplit.
+ * Configuration can be loaded from:
+ * 1. Cloudflare KV (editable via Settings page) - PRIORITY
+ * 2. Environment Variables (fallback)
  * 
  * ## Required Environment Variables:
  * 
@@ -26,6 +29,7 @@
  * - `APP_URL`: Your application's base URL
  * - `NEXT_PUBLIC_APP_URL`: Public-facing app URL (client-side accessible)
  * - `JWT_SECRET`: Secret key for JWT token generation (optional)
+ * - `SETTINGS_PASSWORD`: Password to protect settings page (optional but recommended)
  * 
  * @see .env.example for complete configuration template
  */
@@ -62,6 +66,7 @@ interface Env {
   appUrl: string;
   publicAppUrl: string;
   jwtSecret?: string;
+  settingsPassword?: string;
 }
 
 /**
@@ -176,6 +181,7 @@ function loadEnv(): Env {
   const appUrl = requireEnv('APP_URL');
   const publicAppUrl = requireEnv('NEXT_PUBLIC_APP_URL');
   const jwtSecret = getEnv('JWT_SECRET');
+  const settingsPassword = getEnv('SETTINGS_PASSWORD');
 
   return {
     gaMeasurementId,
@@ -188,6 +194,7 @@ function loadEnv(): Env {
     appUrl,
     publicAppUrl,
     jwtSecret,
+    settingsPassword,
   };
 }
 
