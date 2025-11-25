@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateTestConfig, createTestConfig, generateTrackingSnippet, generateSetupInstructions } from '@/lib/tests';
 import { generateWorkerCode } from '@/lib/cloudflare';
 import { saveTest } from '@/lib/kv';
+import { addTestToList } from '@/lib/sync';
 import type { CreateTestRequest, CreateTestResponse } from '@/types/Test';
 
 export async function POST(request: NextRequest) {
@@ -32,6 +33,9 @@ export async function POST(request: NextRequest) {
 
     // Save to KV store
     await saveTest(test);
+    
+    // Add to sync list
+    await addTestToList(test.id);
 
     const response: CreateTestResponse = {
       success: true,

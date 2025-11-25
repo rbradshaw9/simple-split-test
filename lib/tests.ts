@@ -137,26 +137,13 @@ export function generateSetupInstructions(test: Test, workerUrl?: string): strin
 
 This test uses **Thompson Sampling** for adaptive traffic allocation.
 
-**Additional Setup Required:**
+**How It Works:**
 
-1. Set up a cron job to sync stats every 15 minutes:
-   \`\`\`bash
-   curl -X POST ${workerUrl || 'http://localhost:3000'}/api/sync/${test.id}
-   \`\`\`
-
-2. Using Vercel Cron (add to vercel.json):
-   \`\`\`json
-   {
-     "crons": [{
-       "path": "/api/sync/${test.id}",
-       "schedule": "*/15 * * * *"
-     }]
-   }
-   \`\`\`
-
-3. The system will automatically allocate more traffic to better-performing variants
-4. Configured percentages are ignored - allocation is dynamic
-5. Requires at least 100 views per variant before optimization begins
+- All tests sync automatically every 15 minutes via a single cron job
+- The system automatically allocates more traffic to better-performing variants
+- Configured percentages are ignored - allocation is dynamic
+- Requires at least 100 views per variant before optimization begins
+- No manual setup required - syncing happens automatically
 ` : '';
 
   return `# Setup Instructions for "${test.name}"
@@ -197,7 +184,7 @@ ${optimizationNote}
 - Check that the cookie \`${test.id}\` is set after redirect
 - Verify events appear in GA4 DebugView within a few minutes
 - Variant IDs: ${test.variants.map(v => v.id).join(', ')} (must match KV keys)
-${test.autoOptimize ? '- Monitor the sync status at: `/api/sync/' + test.id + '`\n' : ''}
+${test.autoOptimize ? '- All tests sync automatically every 15 minutes via single cron job\n- View sync status in your test dashboard\n' : ''}
 
 **⚠️ Critical:** KV keys must use format:
 - \`test:${test.id}:views_control\`

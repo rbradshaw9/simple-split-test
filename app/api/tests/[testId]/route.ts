@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTest, deleteTest } from '@/lib/kv';
+import { removeTestFromList } from '@/lib/sync';
 
 /**
  * GET /api/tests/[testId]
@@ -39,6 +40,9 @@ export async function DELETE(
 ) {
   try {
     await deleteTest(params.testId);
+    
+    // Remove from sync list
+    await removeTestFromList(params.testId);
     
     return NextResponse.json({ success: true });
   } catch (error) {
