@@ -215,6 +215,10 @@ export async function deleteTest(testId: string): Promise<void> {
   const key = `test:${testId}`;
   await kv.delete(key);
   
+  // Also delete stats
+  const statsKey = `stats:${testId}`;
+  await kv.delete(statsKey);
+  
   // Remove from index
   await removeFromTestsIndex(testId);
 }
