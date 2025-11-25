@@ -21,9 +21,8 @@ export async function GET(request: NextRequest) {
       gaPropertyId: config.gaPropertyId,
       gaApiSecret: maskSecret(config.gaApiSecret),
       googleServiceAccount: {
-        client_email: config.googleServiceAccount.client_email,
-        project_id: config.googleServiceAccount.project_id,
-        private_key: maskSecret(config.googleServiceAccount.private_key),
+        email: config.googleServiceAccount.email,
+        privateKey: maskSecret(config.googleServiceAccount.privateKey),
       },
       cfAccountId: config.cfAccountId,
       cfNamespaceId: config.cfNamespaceId,

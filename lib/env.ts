@@ -14,10 +14,11 @@
  * - `GA4_API_SECRET`: GA4 Measurement Protocol API Secret
  * 
  * ### Google Service Account
- * - `GOOGLE_SERVICE_ACCOUNT_KEY`: Complete service account JSON key as a ONE-LINE string
- *   - Must be the entire JSON from Google Cloud Console
- *   - Newlines in the private_key must be escaped as \n (literal backslash-n)
- *   - Format: '{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",...}'
+ * - `GA_SERVICE_ACCOUNT_EMAIL`: Service account email address
+ *   - Format: your-service-account@your-project.iam.gserviceaccount.com
+ * - `GA_SERVICE_ACCOUNT_PRIVATE_KEY`: Service account private key
+ *   - Format: -----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----
+ *   - Newlines should be literal \n (will be converted automatically)
  *   - The service account must have "Viewer" role on your GA4 property
  * 
  * ### Cloudflare (Optional for API routes, required for Worker deployment)
@@ -35,17 +36,8 @@
  */
 
 interface GoogleServiceAccount {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
-  universe_domain: string;
+  email: string;
+  privateKey: string;
 }
 
 interface Env {
@@ -92,47 +84,11 @@ function getEnv(key: string): string | undefined {
 }
 
 /**
- * Parses and validates the Google Service Account JSON
+ * Processes the private key by converting escaped newlines to actual newlines
  */
-function parseServiceAccount(jsonString: string): GoogleServiceAccount {
-  try {
-    const parsed = JSON.parse(jsonString) as GoogleServiceAccount;
-
-    // Validate required fields
-    const requiredFields = [
-      'type',
-      'project_id',
-      'private_key_id',
-      'private_key',
-      'client_email',
-      'client_id',
-    ];
-
-    for (const field of requiredFields) {
-      if (!(field in parsed) || !parsed[field as keyof GoogleServiceAccount]) {
-        throw new Error(`Missing required field in service account JSON: ${field}`);
-      }
-    }
-
-    // Validate private key format
-    if (!parsed.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
-      throw new Error(
-        'Invalid private_key format in service account JSON.\n' +
-        'The private_key must contain "-----BEGIN PRIVATE KEY-----" and newlines should be escaped as \\n'
-      );
-    }
-
-    return parsed;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(
-        `Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY: Invalid JSON format.\n` +
-        `Make sure the entire service account JSON is on ONE LINE with escaped newlines (\\n).\n` +
-        `Original error: ${error.message}`
-      );
-    }
-    throw error;
-  }
+function processPrivateKey(privateKey: string): string {
+  // Convert \n to actual newlines (handles both Vercel and local .env formats)
+  return privateKey.replace(/\\n/g, '\n');
 }
 
 /**
@@ -159,8 +115,24 @@ function loadEnv(): Env {
   }
 
   // Google Service Account
-  const serviceAccountJson = requireEnv('GOOGLE_SERVICE_ACCOUNT_KEY');
-  const googleServiceAccount = parseServiceAccount(serviceAccountJson);
+  const serviceAccountEmail = requireEnv('GA_SERVICE_ACCOUNT_EMAIL');
+  const serviceAccountPrivateKey = requireEnv('GA_SERVICE_ACCOUNT_PRIVATE_KEY');
+  
+  // Process private key to handle escaped newlines
+  const privateKey = processPrivateKey(serviceAccountPrivateKey);
+  
+  // Validate private key format
+  if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    throw new Error(
+      'Invalid GA_SERVICE_ACCOUNT_PRIVATE_KEY format.\n' +
+      'The private key must contain "-----BEGIN PRIVATE KEY-----"'
+    );
+  }
+  
+  const googleServiceAccount: GoogleServiceAccount = {
+    email: serviceAccountEmail,
+    privateKey: privateKey,
+  };
 
   // Cloudflare Configuration (optional)
   const cfAccountId = getEnv('CLOUDFLARE_ACCOUNT_ID');
@@ -209,7 +181,7 @@ try {
   console.log('✅ Environment variables loaded successfully');
   console.log(`   GA4 Measurement ID: ${env.gaMeasurementId}`);
   console.log(`   GA4 Property ID: ${env.gaPropertyId}`);
-  console.log(`   Service Account: ${env.googleServiceAccount.client_email}`);
+  console.log(`   Service Account: ${env.googleServiceAccount.email}`);
   console.log(`   Cloudflare Config: ${env.cfAccountId ? '✓' : '✗'}`);
 } catch (error) {
   console.error('❌ Failed to load environment variables:');

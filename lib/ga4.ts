@@ -232,13 +232,12 @@ async function createJWT(credentials: AppConfig['googleServiceAccount']): Promis
   const header = {
     alg: 'RS256',
     typ: 'JWT',
-    kid: credentials.private_key_id,
   };
   
   const payload = {
-    iss: credentials.client_email,
+    iss: credentials.email,
     scope: 'https://www.googleapis.com/auth/analytics.readonly',
-    aud: credentials.token_uri,
+    aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
     iat: now,
   };
@@ -249,7 +248,7 @@ async function createJWT(credentials: AppConfig['googleServiceAccount']): Promis
   const signatureInput = `${encodedHeader}.${encodedPayload}`;
 
   // Sign with private key
-  const signature = await signWithPrivateKey(signatureInput, credentials.private_key);
+  const signature = await signWithPrivateKey(signatureInput, credentials.privateKey);
   
   return `${signatureInput}.${signature}`;
 }

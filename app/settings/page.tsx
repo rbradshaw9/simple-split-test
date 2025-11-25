@@ -13,9 +13,8 @@ interface AppConfig {
   gaPropertyId: string;
   gaApiSecret: string;
   googleServiceAccount: {
-    client_email: string;
-    project_id: string;
-    private_key: string;
+    email: string;
+    privateKey: string;
   };
   cfAccountId: string;
   cfNamespaceId: string;
@@ -253,10 +252,10 @@ export default function SettingsPage() {
               <Label htmlFor="serviceAccountEmail">Service Account Email</Label>
               <Input
                 id="serviceAccountEmail"
-                value={editedConfig.googleServiceAccount.client_email}
+                value={editedConfig.googleServiceAccount.email}
                 onChange={(e) => setEditedConfig({
                   ...editedConfig,
-                  googleServiceAccount: { ...editedConfig.googleServiceAccount, client_email: e.target.value }
+                  googleServiceAccount: { ...editedConfig.googleServiceAccount, email: e.target.value }
                 })}
                 placeholder="service-account@project.iam.gserviceaccount.com"
               />
@@ -265,10 +264,10 @@ export default function SettingsPage() {
               <Label htmlFor="privateKey">Service Account Private Key</Label>
               <Textarea
                 id="privateKey"
-                value={editedConfig.googleServiceAccount.private_key}
+                value={editedConfig.googleServiceAccount.privateKey}
                 onChange={(e) => setEditedConfig({
                   ...editedConfig,
-                  googleServiceAccount: { ...editedConfig.googleServiceAccount, private_key: e.target.value }
+                  googleServiceAccount: { ...editedConfig.googleServiceAccount, privateKey: e.target.value }
                 })}
                 placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
                 rows={6}

@@ -54,14 +54,16 @@ export async function loadConfig(): Promise<AppConfig> {
  * Load configuration from environment variables
  */
 function loadConfigFromEnv(): AppConfig {
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}';
-  let googleServiceAccount: GoogleServiceAccount;
+  const serviceAccountEmail = process.env.GA_SERVICE_ACCOUNT_EMAIL || '';
+  const serviceAccountPrivateKey = process.env.GA_SERVICE_ACCOUNT_PRIVATE_KEY || '';
   
-  try {
-    googleServiceAccount = JSON.parse(serviceAccountJson) as GoogleServiceAccount;
-  } catch {
-    throw new Error('Invalid GOOGLE_SERVICE_ACCOUNT_KEY in environment variables');
-  }
+  // Process private key to handle escaped newlines
+  const privateKey = serviceAccountPrivateKey.replace(/\\n/g, '\n');
+  
+  const googleServiceAccount: GoogleServiceAccount = {
+    email: serviceAccountEmail,
+    privateKey: privateKey,
+  };
 
   return {
     gaMeasurementId: process.env.GA4_MEASUREMENT_ID || '',
@@ -101,14 +103,14 @@ export function validateConfig(config: Partial<AppConfig>): string[] {
     errors.push('GA4 API Secret is required');
   }
 
-  if (!config.googleServiceAccount?.private_key) {
+  if (!config.googleServiceAccount?.privateKey) {
     errors.push('Google Service Account private key is required');
-  } else if (!config.googleServiceAccount.private_key.includes('BEGIN PRIVATE KEY')) {
+  } else if (!config.googleServiceAccount.privateKey.includes('BEGIN PRIVATE KEY')) {
     errors.push('Invalid private key format in service account');
   }
 
-  if (!config.googleServiceAccount?.client_email) {
-    errors.push('Google Service Account client email is required');
+  if (!config.googleServiceAccount?.email) {
+    errors.push('Google Service Account email is required');
   }
 
   if (!config.cfAccountId || config.cfAccountId.length < 10) {
