@@ -31,7 +31,8 @@ export async function fetchGA4Stats(test: Test): Promise<TestStats> {
         body: JSON.stringify({
           dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
           dimensions: [
-            { name: 'eventName' }
+            { name: 'eventName' },
+            { name: 'customEvent:bucket' }
           ],
           metrics: [{ name: 'eventCount' }],
           dimensionFilter: {
@@ -105,28 +106,22 @@ function parseGA4Data(data: GA4ReportResponse, test: Test): TestStats {
   }
 
   // Parse rows
-  // Note: Without bucket dimension, we can't split by variant yet
-  // This requires setting up a custom dimension in GA4 for the bucket parameter
   data.rows.forEach((row: GA4ReportRow) => {
     const eventName = row.dimensionValues[0]?.value;
+    const bucket = row.dimensionValues[1]?.value;
     const count = parseInt(row.metricValues[0]?.value || '0', 10);
+
+    if (!bucket) return;
 
     const isView = eventName === test.eventNames.view;
     const isConversion = eventName === test.eventNames.conversion;
 
-    // For now, just count total events (can't split by bucket without custom dimension)
-    // To fix: Set up custom dimension in GA4 for 'bucket' event parameter
-    if (isView) {
-      stats.controlViews += Math.floor(count / (test.variants.length + 1));
-      test.variants.forEach(variant => {
-        stats.variantStats[variant.id].views += Math.floor(count / (test.variants.length + 1));
-      });
-    }
-    if (isConversion) {
-      stats.controlConversions += Math.floor(count / (test.variants.length + 1));
-      test.variants.forEach(variant => {
-        stats.variantStats[variant.id].conversions += Math.floor(count / (test.variants.length + 1));
-      });
+    if (bucket === 'control') {
+      if (isView) stats.controlViews += count;
+      if (isConversion) stats.controlConversions += count;
+    } else if (stats.variantStats[bucket]) {
+      if (isView) stats.variantStats[bucket].views += count;
+      if (isConversion) stats.variantStats[bucket].conversions += count;
     }
   });
 
