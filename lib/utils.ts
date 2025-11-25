@@ -10,11 +10,12 @@ export function slugify(text: string): string {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '_')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '_')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+    .replace(/\s+/g, '-')        // spaces to hyphens
+    .replace(/_+/g, '-')         // underscores to hyphens
+    .replace(/[^\w\-]+/g, '')   // remove non-word chars except hyphens
+    .replace(/\-\-+/g, '-')     // collapse multiple hyphens
+    .replace(/^-+/, '')          // trim leading hyphens
+    .replace(/-+$/, '');         // trim trailing hyphens
 }
 
 export function formatNumber(num: number): string {

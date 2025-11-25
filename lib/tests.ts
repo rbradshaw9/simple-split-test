@@ -101,15 +101,31 @@ export function generateTrackingSnippet(test: Test): string {
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
-  // Fire conversion event
-  if (typeof gtag !== 'undefined') {
+  function fireConversion() {
     const bucket = getCookie('${test.id}');
-    if (bucket) {
+    if (!bucket) {
+      console.warn('EdgeSplit: No bucket cookie found');
+      return;
+    }
+    
+    if (typeof gtag !== 'undefined') {
       gtag('event', '${test.eventNames.conversion}', {
         bucket: bucket
       });
       console.log('EdgeSplit: Conversion tracked for bucket:', bucket);
+    } else {
+      console.warn('EdgeSplit: gtag not available yet');
     }
+  }
+
+  // Wait for GA4 to be ready before firing
+  if (typeof gtag !== 'undefined') {
+    fireConversion();
+  } else {
+    // GA4 loads async - wait for it
+    window.addEventListener('load', function() {
+      setTimeout(fireConversion, 100);
+    });
   }
 </script>`;
 }
@@ -180,5 +196,11 @@ ${optimizationNote}
 - Test the redirect by visiting: \`${(test as any).entryUrl || 'yourdomain.com' + test.entryPath}\`
 - Check that the cookie \`${test.id}\` is set after redirect
 - Verify events appear in GA4 DebugView within a few minutes
-${test.autoOptimize ? '- Monitor the sync status at: `/api/sync/' + test.id + '`\n' : ''}`;
+- Variant IDs: ${test.variants.map(v => v.id).join(', ')} (must match KV keys)
+${test.autoOptimize ? '- Monitor the sync status at: `/api/sync/' + test.id + '`\n' : ''}
+
+**⚠️ Critical:** KV keys must use format:
+- \`test:${test.id}:views_control\`
+- \`test:${test.id}:conversions_control\`
+${test.variants.map(v => `- \`test:${test.id}:views_${v.id}\`\n- \`test:${test.id}:conversions_${v.id}\``).join('\n')}`;
 }

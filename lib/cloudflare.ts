@@ -41,7 +41,7 @@ export default {
     if (existingBucket) {
       // User already assigned - redirect to their bucket
       const targetUrl = getTargetUrl(existingBucket, testConfig);
-      await sendGA4Event(testConfig, existingBucket, 'view');
+      await sendGA4Event(testConfig, existingBucket, 'view', request);
       return Response.redirect(targetUrl, 302);
     }
     
@@ -51,8 +51,19 @@ export default {
     if (testConfig.autoOptimize === true) {
       // Thompson Sampling: adaptive allocation based on performance
       const stats = await loadStats(env, testConfig.id, testConfig.variants);
+      
+      // Check if we have enough data for Thompson Sampling (min 100 views per variant)
       const variantKeys = ['control', ...testConfig.variants.map(v => v.id)];
-      bucket = chooseBucketTS(stats, variantKeys);
+      const totalViews = variantKeys.reduce((sum, key) => sum + (stats.views[key] || 0), 0);
+      const minViewsRequired = variantKeys.length * 100;
+      
+      if (totalViews >= minViewsRequired) {
+        // Enough data - use Thompson Sampling
+        bucket = chooseBucketTS(stats, variantKeys);
+      } else {
+        // Not enough data yet - use static allocation to gather data
+        bucket = assignBucket(testConfig);
+      }
     } else {
       // Static allocation: use configured percentages
       bucket = assignBucket(testConfig);
@@ -66,7 +77,7 @@ export default {
     response.headers.set('Set-Cookie', cookieValue);
     
     // Send view event to GA4
-    await sendGA4Event(testConfig, bucket, 'view');
+    await sendGA4Event(testConfig, bucket, 'view', request);
     
     return response;
   }
@@ -186,7 +197,7 @@ function getBucket(cookie, testId) {
   return match ? match[1] : null;
 }
 
-async function sendGA4Event(testConfig, bucket, eventType) {
+async function sendGA4Event(testConfig, bucket, eventType, request) {
   const eventName = eventType === 'view' 
     ? testConfig.eventNames.view 
     : testConfig.eventNames.conversion;
@@ -200,8 +211,12 @@ async function sendGA4Event(testConfig, bucket, eventType) {
   }
   
   try {
+    // Use stable client ID based on cf-ray or bucket/test combo
+    const cfRay = request?.headers.get('cf-ray') || Date.now();
+    const clientId = \`\${bucket}_\${testConfig.id}_\${cfRay}\`.substring(0, 36);
+    
     const payload = {
-      client_id: \`worker_\${bucket}_\${Date.now()}\`,
+      client_id: clientId,
       events: [{
         name: eventName,
         params: {
