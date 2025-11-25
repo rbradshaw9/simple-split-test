@@ -58,6 +58,16 @@ export async function fetchGA4Stats(test: Test): Promise<TestStats> {
     );
 
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`GA4 API Error Details:`, {
+        status: response.status,
+        statusText: response.statusText,
+        propertyId,
+        body: errorBody,
+        hint: response.status === 403 
+          ? `Service account may not have access to property ${propertyId}. Grant 'Viewer' role in GA4 Admin > Property Access Management`
+          : undefined
+      });
       throw new Error(`GA4 API error: ${response.status} ${response.statusText}`);
     }
 

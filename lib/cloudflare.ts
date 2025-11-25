@@ -27,6 +27,20 @@ export default {
     
     const testConfig = JSON.parse(testConfigJson);
     
+    // Check for debug mode (force variant via query param: ?__edgesplit_force=control or ?__edgesplit_force=variant_a)
+    const forceVariant = url.searchParams.get('__edgesplit_force');
+    if (forceVariant) {
+      const validVariants = ['control', ...testConfig.variants.map(v => v.id)];
+      if (validVariants.includes(forceVariant)) {
+        const targetUrl = getTargetUrl(forceVariant, testConfig);
+        const response = Response.redirect(targetUrl, 302);
+        const cookieValue = \`\${testConfig.id}=\${forceVariant}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax\`;
+        response.headers.set('Set-Cookie', cookieValue);
+        await sendGA4Event(testConfig, forceVariant, 'view', request);
+        return response;
+      }
+    }
+    
     // Check for existing bucket assignment
     const cookie = request.headers.get('Cookie') || '';
     const existingBucket = getBucket(cookie, '${test.id}');
