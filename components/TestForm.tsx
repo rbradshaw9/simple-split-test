@@ -220,11 +220,16 @@ export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Crea
               </div>
             ))}
 
-            <div className="text-sm">
-              Total: {totalPercentage}%
+            <div className="text-sm font-medium">
+              Total: <span className={totalPercentage === 100 ? 'text-green-600' : 'text-destructive'}>{totalPercentage}%</span>
               {totalPercentage !== 100 && (
-                <span className="text-destructive ml-2">
-                  (must equal 100%)
+                <span className="text-destructive ml-2 font-bold">
+                  ⚠️ Must equal 100% to submit
+                </span>
+              )}
+              {totalPercentage === 100 && (
+                <span className="text-green-600 ml-2">
+                  ✓ Ready to submit
                 </span>
               )}
             </div>
@@ -264,7 +269,17 @@ export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Crea
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={loading || totalPercentage !== 100}>
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading || totalPercentage !== 100}
+            onClick={() => {
+              if (totalPercentage !== 100) {
+                console.log('Button disabled - percentages must equal 100%. Current total:', totalPercentage);
+                alert(`Button is disabled. Percentages must equal 100%. Current total: ${totalPercentage}%`);
+              }
+            }}
+          >
             {loading ? (initialData ? 'Updating...' : 'Creating...') : submitLabel}
           </Button>
         </form>

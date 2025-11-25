@@ -43,9 +43,13 @@ export default function HomePage() {
 
   const loadExistingTests = async () => {
     try {
-      const response = await fetch('/api/tests/list');
+      // Add cache busting to prevent stale data
+      const response = await fetch(`/api/tests/list?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       if (response.ok) {
         const data = await response.json();
+        console.log('Loaded tests:', data.tests);
         setExistingTests(data.tests || []);
       }
     } catch (error) {

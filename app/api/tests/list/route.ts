@@ -5,11 +5,19 @@ export async function GET() {
   try {
     const tests = await getAllTests();
 
-    return NextResponse.json({
-      success: true,
-      tests,
-      count: tests.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        tests,
+        count: tests.length,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching tests:', error);
     return NextResponse.json(
