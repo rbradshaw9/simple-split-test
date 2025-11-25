@@ -48,6 +48,10 @@ export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Crea
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('=== FORM SUBMISSION STARTED ===');
+    console.log('Event:', e);
+    console.log('Form data:', { name, entryPath, controlUrl, controlPercentage, variants, autoOptimize });
+    
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -69,18 +73,26 @@ export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Crea
       }
 
       // Default behavior: create new test
+      console.log('Sending request to /api/tests/create');
+      console.log('Request data:', data);
+      
       const response = await fetch('/api/tests/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
+      console.log('Response status:', response.status);
+      
       const result = await response.json();
+      console.log('Response data:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create test');
       }
 
+      console.log('Test created successfully, calling onSuccess with testId:', result.testId);
+      
       if (onSuccess) {
         onSuccess(result.testId);
       }
