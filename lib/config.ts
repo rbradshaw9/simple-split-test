@@ -39,6 +39,10 @@ export async function loadConfig(): Promise<AppConfig> {
     
     if (stored) {
       const config = JSON.parse(stored) as AppConfig;
+      // Ensure private key has proper newlines
+      if (config.googleServiceAccount?.privateKey) {
+        config.googleServiceAccount.privateKey = config.googleServiceAccount.privateKey.replace(/\\n/g, '\n');
+      }
       console.log('✅ Loaded configuration from KV storage');
       return config;
     }
@@ -105,8 +109,16 @@ export function validateConfig(config: Partial<AppConfig>): string[] {
 
   if (!config.googleServiceAccount?.privateKey) {
     errors.push('Google Service Account private key is required');
-  } else if (!config.googleServiceAccount.privateKey.includes('BEGIN PRIVATE KEY')) {
-    errors.push('Invalid private key format in service account');
+  } else {
+    const key = config.googleServiceAccount.privateKey;
+    if (!key.includes('BEGIN PRIVATE KEY') || !key.includes('END PRIVATE KEY')) {
+      errors.push('Invalid private key format: must be a valid PEM format key');
+    }
+    // Check if key appears to have proper line breaks
+    const hasNewlines = key.includes('\n') || key.split('\n').length > 1;
+    if (!hasNewlines) {
+      errors.push('Private key appears to be missing line breaks');
+    }
   }
 
   if (!config.googleServiceAccount?.email) {

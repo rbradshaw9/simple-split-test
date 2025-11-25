@@ -263,12 +263,24 @@ function base64UrlEncode(str: string): string {
 
 async function signWithPrivateKey(data: string, privateKey: string): Promise<string> {
   const crypto = await import('crypto');
+  
+  // Ensure private key has proper formatting
+  let formattedKey = privateKey.trim();
+  if (!formattedKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+    throw new Error('Invalid private key format: missing BEGIN marker');
+  }
+  
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(data);
   sign.end();
   
-  const signature = sign.sign(privateKey);
-  return base64UrlEncode(signature.toString('base64'));
+  const signature = sign.sign(formattedKey);
+  
+  // Convert signature buffer directly to base64url
+  return signature.toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 export async function validateGA4Access(propertyId: string): Promise<boolean> {
