@@ -20,7 +20,9 @@ export interface EventNames {
 export interface Test {
   id: string;
   name: string;
-  entryPath: string;
+  entryPath: string; // URL path only (e.g., /income-stacking-webclass)
+  entryUrl?: string; // Full entry URL (e.g., https://go.example.com/income-stacking-webclass)
+  entryDomain?: string; // Domain from entry URL (e.g., go.example.com)
   controlUrl: string;
   variants: TestVariant[];
   controlPercentage: number;

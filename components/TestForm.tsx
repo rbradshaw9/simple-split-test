@@ -22,7 +22,7 @@ export function TestForm({ onSuccess }: TestFormProps) {
   const [error, setError] = useState<string | null>(null);
   
   const [name, setName] = useState('');
-  const [entryPath, setEntryPath] = useState('/');
+  const [entryPath, setEntryPath] = useState('');
   const [controlUrl, setControlUrl] = useState('');
   const [controlPercentage, setControlPercentage] = useState(50);
   const [variants, setVariants] = useState<Variant[]>([
@@ -105,18 +105,18 @@ export function TestForm({ onSuccess }: TestFormProps) {
             />
           </div>
 
-          {/* Entry Path */}
+          {/* Entry URL */}
           <div className="space-y-2">
-            <Label htmlFor="entryPath">Entry Path</Label>
+            <Label htmlFor="entryPath">Entry URL</Label>
             <Input
               id="entryPath"
               value={entryPath}
               onChange={(e) => setEntryPath(e.target.value)}
-              placeholder="/income-stacking-webclass"
+              placeholder="https://go.thecashflowacademy.com/income-stacking-webclass"
               required
             />
             <p className="text-sm text-muted-foreground">
-              The URL path that triggers the A/B test
+              The full URL that triggers the A/B test (domain + path)
             </p>
           </div>
 

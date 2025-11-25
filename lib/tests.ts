@@ -9,8 +9,8 @@ export function validateTestConfig(data: CreateTestRequest): string[] {
     errors.push('Test name is required');
   }
 
-  if (!data.entryPath || !data.entryPath.startsWith('/')) {
-    errors.push('Entry path must start with /');
+  if (!data.entryPath || !isValidUrl(data.entryPath)) {
+    errors.push('Entry URL must be a valid URL');
   }
 
   if (!data.controlUrl || !isValidUrl(data.controlUrl)) {
@@ -47,11 +47,18 @@ export function validateTestConfig(data: CreateTestRequest): string[] {
 export function createTestConfig(data: CreateTestRequest): Test {
   const testId = slugify(data.name);
   const timestamp = Date.now();
+  
+  // Extract domain and path from entry URL
+  const entryUrl = new URL(data.entryPath);
+  const entryDomain = entryUrl.hostname;
+  const entryPathOnly = entryUrl.pathname;
 
   return {
     id: testId,
     name: data.name,
-    entryPath: data.entryPath,
+    entryPath: entryPathOnly,
+    entryUrl: data.entryPath,
+    entryDomain: entryDomain,
     controlUrl: data.controlUrl,
     variants: data.variants.map((v, i) => ({
       id: `variant${i + 1}`,
@@ -152,7 +159,7 @@ ${test.autoOptimize ? '\n**Optimization Mode:** Thompson Sampling (Adaptive)\n' 
 ## Step 3: Add Worker Route
 
 Add a route in Cloudflare:
-- Route: \`yourdomain.com${test.entryPath}*\`
+- Route: \`${(test as any).entryDomain || 'yourdomain.com'}${test.entryPath}*\`
 - Worker: \`${test.id}-router\`
 
 ## Step 4: Add Conversion Tracking
@@ -167,7 +174,7 @@ ${optimizationNote}
 ## Important Notes
 
 - Make sure GA4 is installed on all pages (control, variants, and confirmation)
-- Test the redirect by visiting: \`yourdomain.com${test.entryPath}\`
+- Test the redirect by visiting: \`${(test as any).entryUrl || 'yourdomain.com' + test.entryPath}\`
 - Check that the cookie \`${test.id}\` is set after redirect
 - Verify events appear in GA4 DebugView within a few minutes
 ${test.autoOptimize ? '- Monitor the sync status at: `/api/sync/' + test.id + '`\n' : ''}`;
