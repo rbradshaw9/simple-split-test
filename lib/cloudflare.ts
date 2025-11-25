@@ -6,13 +6,6 @@ import { env } from './env';
  */
 
 export function generateWorkerCode(test: Test): string {
-  const variantAssignments = test.variants.map((v, i) => {
-    const cumulativePercentage = test.controlPercentage + 
-      test.variants.slice(0, i + 1).reduce((sum, variant) => sum + variant.percentage, 0);
-    
-    return `  if (roll < ${cumulativePercentage}) return '${v.id}';`;
-  }).join('\n');
-
   const optimizationMode = test.autoOptimize ? 'Thompson Sampling (Adaptive)' : 'Static Percentages';
 
   return `/**
@@ -86,13 +79,22 @@ export default {
 function assignBucket(testConfig) {
   const roll = Math.random() * 100;
   
-  if (roll < testConfig.controlPercentage) {
+  // Use cumulative percentages to handle multiple variants correctly
+  let cumulative = testConfig.controlPercentage;
+  
+  if (roll < cumulative) {
     return 'control';
   }
   
-${variantAssignments}
+  // Iterate through variants and check cumulative percentages
+  for (const variant of testConfig.variants) {
+    cumulative += variant.percentage;
+    if (roll < cumulative) {
+      return variant.id;
+    }
+  }
   
-  return 'control'; // Fallback
+  return 'control'; // Fallback (should never reach if percentages sum to 100)
 }
 
 // Thompson Sampling Functions
