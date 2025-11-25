@@ -59,13 +59,27 @@ export default function HomePage() {
     }
   };
 
-  const handleTestCreated = async (testId: string) => {
-    // Fetch the created test data
-    const response = await fetch(`/api/stats/${testId}`);
-    const data = await response.json();
-    setTestData(data);
-    setShowResults(true);
-    // Reload test list to reflect any changes
+  const handleTestCreated = async (testId: string, fullResponse?: any) => {
+    console.log('Test created with ID:', testId, fullResponse);
+    
+    if (fullResponse) {
+      // Use the data from the create response
+      setTestData({
+        test: {
+          ...fullResponse.test,
+          workerCode: fullResponse.workerCode,
+          trackingSnippet: fullResponse.trackingSnippet,
+          setupInstructions: fullResponse.setupInstructions,
+        },
+        stats: null, // No stats yet for new test
+      });
+      setShowResults(true);
+    } else {
+      // Fallback: navigate to test page
+      router.push(`/tests/${testId}`);
+    }
+    
+    // Reload test list to reflect the new test
     await loadExistingTests();
   };
 

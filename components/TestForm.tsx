@@ -9,7 +9,7 @@ import { Plus, X } from 'lucide-react';
 import type { CreateTestRequest } from '@/types/Test';
 
 interface TestFormProps {
-  onSuccess?: (testId: string) => void;
+  onSuccess?: (testId: string, fullResponse?: any) => void;
   onSubmit?: (data: CreateTestRequest) => Promise<void>;
   initialData?: CreateTestRequest;
   submitLabel?: string;
@@ -94,7 +94,7 @@ export function TestForm({ onSuccess, onSubmit, initialData, submitLabel = 'Crea
       console.log('Test created successfully, calling onSuccess with testId:', result.testId);
       
       if (onSuccess) {
-        onSuccess(result.testId);
+        onSuccess(result.testId, result);
       }
     } catch (err) {
       console.error('Test creation error:', err);
