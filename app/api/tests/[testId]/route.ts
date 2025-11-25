@@ -20,7 +20,15 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ test });
+    return NextResponse.json(
+      { test },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching test:', error);
     return NextResponse.json(

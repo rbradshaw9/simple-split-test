@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateTestConfig, createTestConfig, generateTrackingSnippet, generateSetupInstructions } from '@/lib/tests';
 import { generateWorkerCode } from '@/lib/cloudflare';
-import { saveTest } from '@/lib/kv';
+import { saveTest, getTest } from '@/lib/kv';
 import { addTestToList } from '@/lib/sync';
+import { slugify } from '@/lib/utils';
 import type { CreateTestRequest, CreateTestResponse } from '@/types/Test';
 
 export async function POST(request: NextRequest) {
@@ -15,6 +16,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Validation failed', errors },
         { status: 400 }
+      );
+    }
+
+    // Check if test with this name already exists (before expensive config creation)
+    const potentialTestId = slugify(data.name);
+    const existingTest = await getTest(potentialTestId);
+    if (existingTest) {
+      return NextResponse.json(
+        { error: `A test with this name already exists. Please choose a different name.` },
+        { status: 409 }
       );
     }
 

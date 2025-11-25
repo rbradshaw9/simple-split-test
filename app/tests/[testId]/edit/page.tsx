@@ -83,9 +83,12 @@ export default function EditTestPage() {
   }
 
   // Convert test to CreateTestRequest format
+  // Reconstruct full entry URL from stored data
+  const fullEntryUrl = test.entryUrl || (test.entryDomain ? `https://${test.entryDomain}${test.entryPath}` : test.entryPath);
+  
   const initialData: CreateTestRequest = {
     name: test.name,
-    entryPath: test.entryUrl || test.entryPath,
+    entryPath: fullEntryUrl,
     controlUrl: test.controlUrl,
     controlPercentage: test.controlPercentage,
     variants: test.variants.map(v => ({
